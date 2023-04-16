@@ -1,0 +1,54 @@
+---
+title: "Intestine RNA-seq Deconvolution"
+format: html
+editor: visual
+---
+
+## Goal
+
+The goal of this work is to deconvolve bulk RNA-seq data collected from intestinal organoids.
+
+## Data Sources
+
+When you click Two data sources will be used: public scRNA-seq data to make a reference and RNA-seq data collected from intestinal organoids.
+
+# Public Data
+
+The public data includes:
+
+|                                                         Title                                                          | Source |                       GSE                       | Year | Link                                                                     | number of samples |
+|:----------:|:----------:|:----------:|:----------:|------------|------------|
+|      Human gastrointestinal epithelia of the esophagus, stomach, and duodenum resolved at single-cell resolution       | Human  |       EGAS00001004695 (EGA) *NOT PUBLIC*        | 2021 | [article](https://doi.org/10.1016/j.celrep.2021.108819)                  | TBD               |
+| A Proximal-to-Distal Survey of Healthy Adult Human Small Intestine and Colon Epithelium by Single-Cell Transcriptomics | Human  | GSE185224 (Use the GEX data -- gene expression) | 2022 | [GSE data](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE185224) | 3 donors          |
+
+```{r packages}
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(Seurat, tidyverse, ggplot2, hdf5r)
+
+```
+
+You can add options to executable code like this
+
+```{r}
+# load data
+
+test <- Read10X_h5("~/Desktop/deconv/GSE185224_Donor1_matrix.h5")
+
+```
+
+```{r read h5ad}
+
+test2 <- anndata::read_h5ad("~/Desktop/deconv/GSE185224_clustered_annotated_adata_k10_lr0.92_v1.7.h5ad")
+
+
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+```{python test}
+
+import scanpy as sc
+
+
+```
