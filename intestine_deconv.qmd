@@ -24,7 +24,7 @@ The public data includes:
 ```{r packages}
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(Seurat, tidyverse, ggplot2, hdf5r)
+pacman::p_load(Seurat, tidyverse, ggplot2, hdf5r, anndata)
 
 ```
 
