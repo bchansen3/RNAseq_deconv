@@ -17,38 +17,120 @@ When you click Two data sources will be used: public scRNA-seq data to make a re
 The public data includes:
 
 |                                                         Title                                                          | Source |                       GSE                       | Year | Link                                                                     | number of samples |
-|:----------:|:----------:|:----------:|:----------:|------------|------------|
+|:--------------------:|:--------:|:--------:|:--------:|-----------|----------|
 |      Human gastrointestinal epithelia of the esophagus, stomach, and duodenum resolved at single-cell resolution       | Human  |       EGAS00001004695 (EGA) *NOT PUBLIC*        | 2021 | [article](https://doi.org/10.1016/j.celrep.2021.108819)                  | TBD               |
 | A Proximal-to-Distal Survey of Healthy Adult Human Small Intestine and Colon Epithelium by Single-Cell Transcriptomics | Human  | GSE185224 (Use the GEX data -- gene expression) | 2022 | [GSE data](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE185224) | 3 donors          |
 
 ```{r packages}
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(Seurat, tidyverse, ggplot2, hdf5r, anndata)
+pacman::p_load(Seurat, tidyverse, ggplot2, hdf5r, anndata, reticulate)
 
 ```
 
-You can add options to executable code like this
+```{r load}
+
+#if (!requireNamespace("remotes", quietly = TRUE)) {
+ # install.packages("remotes")
+#}
+#remotes::install_github("mojaveazure/seurat-disk")
+
+
+```
+
+Load Donors 1, 2, and 3 for study GSE185224
 
 ```{r}
 # load data
 
-test <- Read10X_h5("~/Desktop/deconv/GSE185224_Donor1_matrix.h5")
+donor1 <- Read10X_h5("/bigdata/faustmanlab/bch/deconv/deconv/RNAseq_deconv/deconv/GSE185224_Donor1_filtered_feature_bc_matrix.h5")
+
+donor1 <- CreateSeuratObject(donor1$`Gene Expression`, project="donor1")
+
+donor2<- Read10X_h5("/bigdata/faustmanlab/bch/deconv/deconv/RNAseq_deconv/deconv/GSE185224_Donor2_filtered_feature_bc_matrix.h5")
+
+donor2 <- CreateSeuratObject(donor2$`Gene Expression`, project = "donor2")
+
+donor3<- Read10X_h5("/bigdata/faustmanlab/bch/deconv/deconv/RNAseq_deconv/deconv/GSE185224_Donor3_filtered_feature_bc_matrix.h5")
+
+donor3 <- CreateSeuratObject(donor3$`Gene Expression`, project= "donor3")
 
 ```
 
-```{r read h5ad}
+standard pre-processing
 
-test2 <- anndata::read_h5ad("~/Desktop/deconv/GSE185224_clustered_annotated_adata_k10_lr0.92_v1.7.h5ad")
+follow this (link)[https://satijalab.org/seurat/articles/integration_large_datasets.html]
+
+```{r filter}
+
+bioreps <- list(donor1,donor2,donor3)
+
+bioreps <- lapply(X = bioreps, FUN = function(x) {
+    x <- NormalizeData(x, verbose = FALSE)
+    x <- FindVariableFeatures(x, verbose = FALSE)
+})
+```
+
+
+FInd anchors to integrate the donors
+```{r anchors}
+
+features <- SelectIntegrationFeatures(object.list = bioreps)
+bioreps <- lapply(X = bioreps, FUN = function(x) {
+    x <- ScaleData(x, features = features, verbose = FALSE)
+    x <- RunPCA(x, features = features, verbose = FALSE)
+})
+
+```
+
+```{r integration}
+
+anchors <- FindIntegrationAnchors(object.list = bioreps, reduction = "rpca",
+    dims = 1:50)
+bioreps.integrated <- IntegrateData(anchorset = anchors, dims = 1:50)
+
+```
+
+process and plot
+```{r process integrated}
+
+bioreps.integrated <- ScaleData(bioreps.integrated, verbose = FALSE)
+bioreps.integrated <- RunPCA(bioreps.integrated, verbose = FALSE)
+bioreps.integrated <- RunUMAP(bioreps.integrated, dims = 1:50)
+DimPlot(bioreps.integrated)
 
 
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+find variable features
 
-```{python test}
+```{r variable genes}
 
-import scanpy as sc
+bioreps.integrated <- FindVariableFeatures(bioreps.integrated, selection.method = "vst", nfeatures = 2000)
+# Identify the 10 most highly variable genes
+bioreps.top10 <- head(VariableFeatures(bioreps.integrated), 10)
+# plot variable features with and without labels
+plot1 <- VariableFeaturePlot(bioreps.integrated)
+plot2 <- LabelPoints(plot = plot1, points = bioreps.top10, repel = TRUE)
+plot2
+
+
+```
+
+
+
+
+NEED TO CORRECT FOR OTHER DATASET
+
+```{r test}
+
+#make sure you have python installed. This works with Python 3.8.5
+#if you don't already have it, install the python "scanpy" package using reticulate use the following to install it:
+
+library(reticulate)
+ad <- import("anndata", convert = FALSE)
+pbmc_ad <- ad$read_h5ad("/bigdata/faustmanlab/bch/deconv/deconv/RNAseq_deconv/deconv/gutcellsurvey/new/epi_raw_counts02_v2.h5ad")
+#pbmc3k <- Convert(pbmc_ad, to = "seurat")
 
 
 ```
